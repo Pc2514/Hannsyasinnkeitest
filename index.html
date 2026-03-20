@@ -1,220 +1,136 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Reflex Game</title>
+<title>Reflex Game</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@300;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
 
-  <style>
-    body {
-      margin:0;
-      font-family:'Inter', sans-serif;
-      background:radial-gradient(circle,#0f172a,#020617);
-      color:white;
-      text-align:center;
-      overflow:hidden;
-    }
+<style>
+body {
+  margin:0;
+  background:#0f172a;
+  color:white;
+  font-family:'Orbitron';
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  flex-direction:column;
+}
 
-    .header {
-      padding:15px;
-      font-family:'Orbitron';
-      font-size:22px;
-      background:#020617;
-      box-shadow:0 0 15px #00f0ff;
-    }
+/* タイトル */
+h1 {
+  font-size:28px;
+  margin-bottom:10px;
+}
 
-    .card {
-      background:rgba(255,255,255,0.05);
-      border-radius:20px;
-      padding:25px;
-      margin:20px;
-      box-shadow:0 0 25px rgba(0,255,255,0.2);
-    }
+/* スコア */
+#top {
+  font-size:18px;
+  margin-bottom:10px;
+}
 
-    button {
-      padding:12px 25px;
-      margin:10px;
-      border:none;
-      border-radius:12px;
-      background:linear-gradient(45deg,#00c6ff,#0072ff);
-      color:white;
-      font-size:16px;
-    }
+/* メイン */
+#box {
+  width:180px;
+  height:180px;
+  border-radius:15px;
+  margin:20px;
+  display:none;
+}
 
-    #box {
-      width:200px;
-      height:200px;
-      margin:20px auto;
-      display:none;
-      border-radius:15px;
-      transition:0.1s;
-    }
+/* 結果 */
+#result {
+  font-size:20px;
+  margin:10px;
+}
 
-    #combo {
-      font-size:30px;
-      margin-top:10px;
-      opacity:0;
-      transform:scale(0.5);
-      transition:0.2s;
-    }
-
-    .showCombo {
-      opacity:1 !important;
-      transform:scale(1.3) !important;
-    }
-
-    /* 画面揺れ */
-    @keyframes shake {
-      0% {transform:translate(0);}
-      25% {transform:translate(-5px);}
-      50% {transform:translate(5px);}
-      75% {transform:translate(-5px);}
-      100% {transform:translate(0);}
-    }
-
-    .shake {
-      animation:shake 0.3s;
-    }
-
-    /* フラッシュ */
-    @keyframes flash {
-      from {background:white;}
-      to {background:transparent;}
-    }
-
-    .flash {
-      animation:flash 0.2s;
-    }
-  </style>
+/* ボタン */
+button {
+  padding:12px 25px;
+  border:none;
+  border-radius:12px;
+  background:#00c6ff;
+  color:white;
+  font-size:16px;
+}
+</style>
 </head>
 
 <body>
 
-<div class="header">REFLEX GAME</div>
+<h1>REFLEX GAME</h1>
 
-<div id="menu" class="card">
-  <h2>MODE SELECT</h2>
-  <button onclick="startNormal()">NORMAL</button>
-  <button onclick="startSurvival()">SURVIVAL</button>
+<div id="top">
+  COMBO: <span id="combo">0</span>
 </div>
 
-<div id="game" class="card" style="display:none;">
-  <div id="box"></div>
-  <div id="result"></div>
-  <div id="combo"></div>
-  <div id="info"></div>
-  <button onclick="backMenu()">BACK</button>
-</div>
+<div id="box"></div>
+
+<div id="result"></div>
+
+<button onclick="start()">START</button>
 
 <script>
 let startTime, waiting;
-let mode="normal";
-let limit=400;
-let streak=0;
+let combo = 0;
 
-function sound(f){
-  let ctx=new (window.AudioContext||window.webkitAudioContext)();
-  let o=ctx.createOscillator();
-  o.frequency.value=f;
-  o.connect(ctx.destination);
-  o.start();
-  setTimeout(()=>o.stop(),100);
+// 音を1回だけ作る（軽量化）
+const ctx = new (window.AudioContext||window.webkitAudioContext)();
+const osc = ctx.createOscillator();
+osc.connect(ctx.destination);
+osc.start();
+
+function beep(freq){
+  osc.frequency.value = freq;
 }
 
-function showGame(){
-  menu.style.display="none";
-  game.style.display="block";
-}
-
-function backMenu(){
-  menu.style.display="block";
-  game.style.display="none";
-}
-
-function startNormal(){
-  mode="normal";
-  showGame();
-  run();
-}
-
-function startSurvival(){
-  mode="survival";
-  streak=0;
-  limit=400;
-  showGame();
-  run();
-}
-
-function run(){
+function start(){
   box.style.display="block";
   box.style.background="red";
   waiting=true;
-  startTime=null;
 
-  let delay=Math.random()*3000+2000;
+  let delay = Math.random()*2000+1500;
 
   setTimeout(()=>{
     box.style.background="lime";
-    sound(800);
-    startTime=Date.now();
+    startTime = Date.now();
     waiting=false;
+    beep(800);
   },delay);
 }
 
-box.onclick=function(){
+box.onclick = function(){
 
   if(waiting){
-    result.innerText="フライング！";
-    document.body.classList.add("shake");
-    sound(200);
-    setTimeout(()=>document.body.classList.remove("shake"),300);
+    result.innerText="フライング";
+    combo=0;
     return;
   }
 
-  let reaction=Date.now()-startTime;
+  let reaction = Date.now()-startTime;
 
-  if(mode==="normal"){
+  if(reaction < 350){
+    combo++;
+    comboEl.innerText = combo;
+
     result.innerText = reaction+" ms";
 
+    // 色変化
+    box.style.background = `hsl(${combo*40},100%,50%)`;
+
+    setTimeout(start,600);
+
   } else {
-
-    if(reaction <= limit){
-      streak++;
-      limit -= 20;
-
-      result.innerText="SUCCESS "+reaction+" ms";
-
-      // 色変化（コンボで変わる）
-      let color = `hsl(${streak*40},100%,50%)`;
-      combo.style.color = color;
-
-      combo.innerText = streak+" COMBO!";
-      combo.classList.add("showCombo");
-
-      document.body.classList.add("flash");
-
-      setTimeout(()=>{
-        combo.classList.remove("showCombo");
-        document.body.classList.remove("flash");
-      },300);
-
-      sound(1000 + streak*50);
-
-      setTimeout(run,700);
-
-    } else {
-      result.innerText="FAILED "+reaction+" ms";
-      info.innerText="FINAL COMBO: "+streak;
-
-      document.body.classList.add("shake");
-      sound(150);
-
-      setTimeout(()=>document.body.classList.remove("shake"),300);
-    }
+    result.innerText = "失敗 "+reaction+" ms";
+    combo=0;
+    comboEl.innerText = combo;
   }
-
-  startTime=null;
 }
+
+const comboEl = document.getElementById("combo");
+const box = document.getElementById("box");
+const result = document.getElementById("result");
 </script>
 
 </body>
